@@ -24,12 +24,19 @@ export default function AlumniDirectory() {
     const [alumni, setAlumni] = useState([]);
     const [display, setDisplay] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [initialLoading, setInitialLoading] = useState(true);
     const [error, setError] = useState("");
+    const [backendOk, setBackendOk] = useState(false);
+    const [searchEmptyMsg, setSearchEmptyMsg] = useState(false);
+
+    const [searchCount, setSearchCount] = useState(0);
+    const [countLoading, setCountLoading] = useState(true);
 
     const [q, setQ] = useState("");
     const [batch, setBatch] = useState("");
     const [district, setDistrict] = useState("");
     const [org, setOrg] = useState("");
+    const [hasSearched, setHasSearched] = useState(false);
 
     const [showAdd, setShowAdd] = useState(false);
     const [form, setForm] = useState({
@@ -43,16 +50,41 @@ export default function AlumniDirectory() {
     useEffect(() => {
         (async () => {
             try {
+                setInitialLoading(true);
                 setLoading(true);
                 const res = await fetch(`${API_BASE}/alumni`);
                 const data = await res.json();
-                const rows = Array.isArray(data) ? data : [];
-                setAlumni(rows);
-                setDisplay(rows);
+                if (!Array.isArray(data)) throw new Error("Unexpected response");
+                setAlumni(data);
+                setDisplay([]);
+                setBackendOk(true);
             } catch (e) {
+                setBackendOk(false);
+                setDisplay([]);
                 setError("Couldn't fetch alumni. Check your backend is running.");
             } finally {
+                setInitialLoading(false);
                 setLoading(false);
+            }
+        })();
+
+        (async () => {
+            try {
+                setCountLoading(true);
+                const res = await fetch(`${API_BASE}/stats/visit`, { method: "POST" });
+                if (!res.ok) throw new Error("stats fetch failed");
+                const data = await res.json();
+                setSearchCount(data.total || 0);
+            } catch (_) {
+                try {
+                    const res = await fetch(`${API_BASE}/stats`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        setSearchCount(data.total || 0);
+                    }
+                } catch (__) {}
+            } finally {
+                setCountLoading(false);
             }
         })();
     }, []);
@@ -71,32 +103,31 @@ export default function AlumniDirectory() {
         return { batches: sort(b), districts: sort(d), orgs: sort(o) };
     }, [alumni]);
 
-    const filterLocally = () => {
-        const needle = q.trim().toLowerCase();
-        setDisplay(
-            alumni.filter((row) => {
-                const nameVal = String(row?.[COL.NAME] || "").toLowerCase();
-                const batchVal = String(row?.[COL.BATCH] || "").trim();
-                const distVal = String(row?.[COL.DISTRICT] || "").trim();
-                const orgVal = String(row?.[COL.ORG] || "").trim();
-                const nameOk = !needle || nameVal.includes(needle);
-                const bOk = !batch || batchVal === batch;
-                const dOk = !district || distVal === district;
-                const oOk = !org || orgVal === org;
-                return nameOk && bOk && dOk && oOk;
-            })
-        );
-    };
-
     const onSearch = async (e) => {
         e?.preventDefault?.();
         setError("");
 
+        const hasQ = q.trim() !== "";
+        const hasBatch = batch.trim() !== "";
+        const hasDistrict = district.trim() !== "";
+        const hasOrg = org.trim() !== "";
+        const anyFilter = hasQ || hasBatch || hasDistrict || hasOrg;
+
+        if (!anyFilter) {
+            setSearchEmptyMsg(true);
+            setHasSearched(false);
+            setDisplay([]);
+            return;
+        }
+
+        setSearchEmptyMsg(false);
+        setHasSearched(true);
+
         const url = new URL(`${API_BASE}/alumni`);
-        if (q) url.searchParams.set("q", q);
-        if (batch) url.searchParams.set("batch", batch);
-        if (district) url.searchParams.set("district", district);
-        if (org) url.searchParams.set("organization", org);
+        if (hasQ) url.searchParams.set("q", q.trim());
+        if (hasBatch) url.searchParams.set("batch", batch.trim());
+        if (hasDistrict) url.searchParams.set("district", district.trim());
+        if (hasOrg) url.searchParams.set("organization", org.trim());
 
         try {
             setLoading(true);
@@ -105,16 +136,40 @@ export default function AlumniDirectory() {
             const data = await res.json();
             if (!Array.isArray(data)) throw new Error("Unexpected response");
             setDisplay(data);
+            setBackendOk(true);
         } catch (_) {
-            filterLocally();
+            setDisplay(
+                alumni.filter((row) => {
+                    const needle = (q || "").trim().toLowerCase();
+                    const nameVal = String(row?.[COL.NAME] || "").toLowerCase();
+                    const batchVal = String(row?.[COL.BATCH] || "").trim();
+                    const distVal = String(row?.[COL.DISTRICT] || "").trim();
+                    const orgVal = String(row?.[COL.ORG] || "").trim();
+                    const nameOk = !needle || nameVal.includes(needle);
+                    const bOk = !hasBatch || batchVal === batch.trim();
+                    const dOk = !hasDistrict || distVal === district.trim();
+                    const oOk = !hasOrg || orgVal === org.trim();
+                    return nameOk && bOk && dOk && oOk;
+                })
+            );
         } finally {
             setLoading(false);
         }
+
+        try {
+            const statRes = await fetch(`${API_BASE}/stats/search`, { method: "POST" });
+            if (statRes.ok) {
+                const statData = await statRes.json();
+                setSearchCount(statData.total || 0);
+            }
+        } catch (_) {}
     };
 
     const onClear = () => {
         setQ(""); setBatch(""); setDistrict(""); setOrg("");
-        setDisplay(alumni);
+        setDisplay([]);
+        setHasSearched(false);
+        setSearchEmptyMsg(false);
     };
 
     const addAlumni = async () => {
@@ -150,7 +205,7 @@ export default function AlumniDirectory() {
             <div style={sx.headerWrap}>
                 <h1 style={sx.title}>NITER EEE Alumni Directory</h1>
                 <p style={sx.subtitle}>
-                    Total alumni registered till date: <span style={sx.number}>{loading ? "—" : totalAlumni.toLocaleString()}</span>
+                    Alumni searches till date: <span style={sx.number}>{countLoading ? "—" : searchCount.toLocaleString()}</span>
                 </p>
             </div>
 
@@ -198,8 +253,24 @@ export default function AlumniDirectory() {
             </div>
 
             <div style={sx.resultsWrap}>
-                {loading ? (
-                    <div style={sx.loading}>Loading…</div>
+                {initialLoading ? (
+                    <div style={sx.loading}>
+                        <div style={sx.spinner}></div>
+                        <div style={{ marginTop: 12 }}>Connecting…</div>
+                    </div>
+                ) : loading && hasSearched ? (
+                    <div style={sx.loading}>
+                        <div style={sx.spinner}></div>
+                        <div style={{ marginTop: 12 }}>Searching…</div>
+                    </div>
+                ) : !hasSearched ? (
+                    searchEmptyMsg ? (
+                        <div style={sx.messageInfo}>Enter a name, batch, district, or organization to search.</div>
+                    ) : backendOk ? (
+                        <div style={sx.messageGood}>You are good to go find someone.</div>
+                    ) : (
+                        <div style={sx.messageBad}>backend is currapted</div>
+                    )
                 ) : error ? (
                     <div style={sx.error}>{error}</div>
                 ) : display.length === 0 ? (
@@ -366,9 +437,64 @@ const sx = {
     name: { fontWeight: 600 },
     meta: { color: textDim },
 
-    loading: { textAlign: "center", padding: 24, color: textDim },
+    loading: {
+        textAlign: "center",
+        padding: "32px 24px",
+        color: textDim,
+        background: cardBg,
+        border: `1px solid ${border}`,
+        borderRadius: 16,
+        maxWidth: 980,
+        margin: "6px auto 0",
+    },
+    spinner: {
+        width: 36,
+        height: 36,
+        border: `4px solid ${border}`,
+        borderTop: `4px solid ${purple}`,
+        borderRadius: "50%",
+        animation: "spin 0.9s linear infinite",
+        margin: "0 auto",
+        display: "block",
+    },
     error: { textAlign: "center", padding: 24, color: "#ff8080" },
     empty: { textAlign: "center", padding: 24, color: textDim },
+    messageInfo: {
+        maxWidth: 980,
+        margin: "6px auto 0",
+        textAlign: "center",
+        padding: "28px 24px",
+        background: "#1a1d2c",
+        border: "1px solid #2f3550",
+        borderRadius: 16,
+        color: "#b4c0ff",
+        fontSize: 17,
+        fontWeight: 500,
+    },
+    messageGood: {
+        maxWidth: 980,
+        margin: "6px auto 0",
+        textAlign: "center",
+        padding: "32px 24px",
+        background: cardBg,
+        border: `1px solid ${border}`,
+        borderRadius: 16,
+        color: text,
+        fontSize: 20,
+        fontWeight: 600,
+    },
+    messageBad: {
+        maxWidth: 980,
+        margin: "6px auto 0",
+        textAlign: "center",
+        padding: "32px 24px",
+        background: "#2a1717",
+        border: "1px solid #5a2a2a",
+        borderRadius: 16,
+        color: "#ff8080",
+        fontSize: 20,
+        fontWeight: 600,
+    },
 
     modalOverlay: {
         position: "fixed",

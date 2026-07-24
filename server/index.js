@@ -17,6 +17,34 @@ const SHEET_NAMES = (process.env.SHEET_NAMES || 'Sheet1')
 const DEFAULT_SHEET_FOR_WRITES = SHEET_NAMES[0] || 'Sheet1';
 const DATA_RANGE = process.env.DATA_RANGE || 'A:D';
 
+const STATS_FILE = path.join(__dirname, 'stats.json');
+
+const readStats = () => {
+  try {
+    if (fs.existsSync(STATS_FILE)) {
+      const raw = fs.readFileSync(STATS_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+      return {
+        visits: Number(parsed.visits) || 0,
+        searches: Number(parsed.searches) || 0,
+      };
+    }
+  } catch (e) {
+    console.warn('⚠️  Could not read stats.json, starting fresh:', e.message);
+  }
+  return { visits: 0, searches: 0 };
+};
+
+const writeStats = (stats) => {
+  try {
+    fs.writeFileSync(STATS_FILE, JSON.stringify(stats, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('❌ Failed to write stats.json:', e.message);
+  }
+};
+
+let stats = readStats();
+
 app.use(cors());
 app.use(express.json());
 
@@ -131,6 +159,34 @@ app.post('/alumni', async (req, res) => {
     if (err?.errors) console.error('Google API errors:', JSON.stringify(err.errors, null, 2));
     res.status(500).json({ error: 'Failed to add alumni to Google Sheets' });
   }
+});
+
+app.get('/stats', (req, res) => {
+  res.json({
+    visits: stats.visits,
+    searches: stats.searches,
+    total: stats.visits + stats.searches,
+  });
+});
+
+app.post('/stats/visit', (req, res) => {
+  stats.visits += 1;
+  writeStats(stats);
+  res.json({
+    visits: stats.visits,
+    searches: stats.searches,
+    total: stats.visits + stats.searches,
+  });
+});
+
+app.post('/stats/search', (req, res) => {
+  stats.searches += 1;
+  writeStats(stats);
+  res.json({
+    visits: stats.visits,
+    searches: stats.searches,
+    total: stats.visits + stats.searches,
+  });
 });
 
 app.get('/health', (req, res) => {

@@ -1,6 +1,7 @@
 node_modules/
 .env
 service-account-key.json
+stats.json
 *.log
 npm-debug.log*
 .DS_Store
