@@ -1,45 +1,54 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-/**
- * AlumniDirectory
- * - Dark UI matching your screenshot
- * - Search inputs: name, batch, country, organization
- * - Calls GET /alumni (array-of-arrays: [name,batch,country,organization])
- * - On Search: tries backend query params; if that fails, filters locally
- * - "Add New Alumni" posts to /alumni with the same fields (modal inline)
- * - Replace `PHOTO_URL` with your image (or remove the <img/> at bottom)
- */
+const COL = {
+  NAME: 0,
+  BATCH: 1,
+  STUDENT_ID: 2,
+  PHONE: 3,
+  EMAIL: 4,
+  NAME_BN: 5,
+  COL_G: 6,
+  PRESENT_ADDR: 7,
+  DISTRICT: 8,
+  BLOOD: 9,
+  STATUS: 10,
+  ORG: 11,
+  COL_M: 12,
+  COL_N: 13,
+  COL_O: 14,
+};
+
 export default function AlumniDirectory() {
     const API_BASE = "http://localhost:5000";
-    const PHOTO_URL =
-        "https://images.unsplash.com/photo-1544006659-f0b21884ce1d?q=80&w=640&auto=format&fit=crop"; // replace as needed
 
-    const [alumni, setAlumni] = useState([]);            // raw data from sheets
-    const [display, setDisplay] = useState([]);          // filtered view
+    const [alumni, setAlumni] = useState([]);
+    const [display, setDisplay] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
-    // search form state
     const [q, setQ] = useState("");
     const [batch, setBatch] = useState("");
-    const [country, setCountry] = useState("");
+    const [district, setDistrict] = useState("");
     const [org, setOrg] = useState("");
 
-    // add-alumni modal state
     const [showAdd, setShowAdd] = useState(false);
-    const [form, setForm] = useState({ name: "", batch: "", country: "", organization: "" });
+    const [form, setForm] = useState({
+        name: "",
+        batch: "",
+        district: "",
+        organization: "",
+    });
     const [adding, setAdding] = useState(false);
 
-    // Fetch all alumni on mount
     useEffect(() => {
         (async () => {
             try {
                 setLoading(true);
                 const res = await fetch(`${API_BASE}/alumni`);
                 const data = await res.json();
-                // Expecting: [["Name","28th","USA","Google"], ...]
-                setAlumni(Array.isArray(data) ? data : []);
-                setDisplay(Array.isArray(data) ? data : []);
+                const rows = Array.isArray(data) ? data : [];
+                setAlumni(rows);
+                setDisplay(rows);
             } catch (e) {
                 setError("Couldn't fetch alumni. Check your backend is running.");
             } finally {
@@ -48,55 +57,55 @@ export default function AlumniDirectory() {
         })();
     }, []);
 
-    // Build unique dropdown options from current dataset
-    const { batches, countries, orgs } = useMemo(() => {
-        const b = new Set(), c = new Set(), o = new Set();
+    const { batches, districts, orgs } = useMemo(() => {
+        const b = new Set(), d = new Set(), o = new Set();
         alumni.forEach((row) => {
-            if (row?.[1]) b.add(row[1]);
-            if (row?.[2]) c.add(row[2]);
-            if (row?.[3]) o.add(row[3]);
+            const batchVal = row?.[COL.BATCH];
+            const distVal = row?.[COL.DISTRICT];
+            const orgVal = row?.[COL.ORG];
+            if (batchVal && String(batchVal).trim()) b.add(String(batchVal).trim());
+            if (distVal && String(distVal).trim()) d.add(String(distVal).trim());
+            if (orgVal && String(orgVal).trim()) o.add(String(orgVal).trim());
         });
         const sort = (arr) => [...arr].sort((x, y) => String(x).localeCompare(String(y)));
-        return { batches: sort(b), countries: sort(c), orgs: sort(o) };
+        return { batches: sort(b), districts: sort(d), orgs: sort(o) };
     }, [alumni]);
 
-    // Local filter fallback (used if backend query is not implemented)
     const filterLocally = () => {
         const needle = q.trim().toLowerCase();
         setDisplay(
             alumni.filter((row) => {
-                const [name = "", b = "", c = "", o = ""] = row;
-                const nameOk = !needle || name.toLowerCase().includes(needle);
-                const bOk = !batch || b === batch;
-                const cOk = !country || c === country;
-                const oOk = !org || o === org;
-                return nameOk && bOk && cOk && oOk;
+                const nameVal = String(row?.[COL.NAME] || "").toLowerCase();
+                const batchVal = String(row?.[COL.BATCH] || "").trim();
+                const distVal = String(row?.[COL.DISTRICT] || "").trim();
+                const orgVal = String(row?.[COL.ORG] || "").trim();
+                const nameOk = !needle || nameVal.includes(needle);
+                const bOk = !batch || batchVal === batch;
+                const dOk = !district || distVal === district;
+                const oOk = !org || orgVal === org;
+                return nameOk && bOk && dOk && oOk;
             })
         );
     };
 
-    // Attempt a backend search; if it fails, do local filtering
     const onSearch = async (e) => {
         e?.preventDefault?.();
         setError("");
 
-        // try backend query first
         const url = new URL(`${API_BASE}/alumni`);
         if (q) url.searchParams.set("q", q);
         if (batch) url.searchParams.set("batch", batch);
-        if (country) url.searchParams.set("country", country);
+        if (district) url.searchParams.set("district", district);
         if (org) url.searchParams.set("organization", org);
 
         try {
             setLoading(true);
             const res = await fetch(url.toString());
-            // If server returns 404/501 for unimplemented query, fall back below
             if (!res.ok) throw new Error("Backend query not supported");
             const data = await res.json();
             if (!Array.isArray(data)) throw new Error("Unexpected response");
             setDisplay(data);
         } catch (_) {
-            // local fallback
             filterLocally();
         } finally {
             setLoading(false);
@@ -104,13 +113,13 @@ export default function AlumniDirectory() {
     };
 
     const onClear = () => {
-        setQ(""); setBatch(""); setCountry(""); setOrg("");
+        setQ(""); setBatch(""); setDistrict(""); setOrg("");
         setDisplay(alumni);
     };
 
     const addAlumni = async () => {
-        const { name, batch, country, organization } = form;
-        if (!name || !batch || !country || !organization) {
+        const { name, batch, district, organization } = form;
+        if (!name || !batch || !district || !organization) {
             alert("Please fill all fields");
             return;
         }
@@ -122,11 +131,10 @@ export default function AlumniDirectory() {
                 body: JSON.stringify(form),
             });
             if (!res.ok) throw new Error("Add failed");
-            // Optimistic update
-            const row = [name, batch, country, organization];
+            const row = [name, batch, "", "", "", "", "", "", district, "", "", organization];
             setAlumni((prev) => [...prev, row]);
             setDisplay((prev) => [...prev, row]);
-            setForm({ name: "", batch: "", country: "", organization: "" });
+            setForm({ name: "", batch: "", district: "", organization: "" });
             setShowAdd(false);
         } catch (e) {
             alert("Couldn't add alumni. Check server logs.");
@@ -135,16 +143,17 @@ export default function AlumniDirectory() {
         }
     };
 
-    // --- UI ---
+    const totalAlumni = alumni.length;
+
     return (
         <div style={sx.page}>
-            {/* Header */}
             <div style={sx.headerWrap}>
                 <h1 style={sx.title}>NITER EEE Alumni Directory</h1>
-                <p style={sx.subtitle}>Alumni searches till date: <span style={sx.number}>500</span></p>
+                <p style={sx.subtitle}>
+                    Total alumni registered till date: <span style={sx.number}>{loading ? "—" : totalAlumni.toLocaleString()}</span>
+                </p>
             </div>
 
-            {/* Search Card */}
             <form onSubmit={onSearch} style={sx.card}>
                 <div style={sx.inputsRow}>
                     <input
@@ -157,29 +166,26 @@ export default function AlumniDirectory() {
                         <option value="">Select batch</option>
                         {batches.map((b) => <option key={b} value={b}>{b}</option>)}
                     </select>
-                    <select style={sx.input} value={country} onChange={(e) => setCountry(e.target.value)}>
-                        <option value="">Select country</option>
-                        {countries.map((c) => <option key={c} value={c}>{c}</option>)}
+                    <select style={sx.input} value={district} onChange={(e) => setDistrict(e.target.value)}>
+                        <option value="">Select district</option>
+                        {districts.map((d) => <option key={d} value={d}>{d}</option>)}
                     </select>
                     <select style={sx.input} value={org} onChange={(e) => setOrg(e.target.value)}>
-                        <option value="">Select organization</option>
+                        <option value="">Select university / org</option>
                         {orgs.map((o) => <option key={o} value={o}>{o}</option>)}
                     </select>
                 </div>
 
-                {/* Buttons row */}
                 <div style={sx.buttonsRow}>
                     <button type="submit" style={sx.primaryBtn}>Search</button>
                     <button type="button" onClick={onClear} style={sx.ghostBtn}>Clear</button>
                 </div>
             </form>
 
-
-            {/* Welcome / CTA Card */}
             <div style={sx.welcomeCard}>
                 <h3 style={sx.welcomeTitle}>Welcome to the NITER EEE Alumni Directory!</h3>
                 <p style={sx.welcomeText}>
-                    Use the search form above to find alumni by name, batch, country, or organization.
+                    Use the search form above to find alumni by name, batch, district, or university / organization.
                 </p>
                 <button style={sx.addBtn} onClick={() => setShowAdd(true)}>Add New Alumni</button>
                 <p style={sx.smallNote}>
@@ -191,7 +197,6 @@ export default function AlumniDirectory() {
                 </p>
             </div>
 
-            {/* Results (simple list to keep page like the screenshot — you can replace with cards/table) */}
             <div style={sx.resultsWrap}>
                 {loading ? (
                     <div style={sx.loading}>Loading…</div>
@@ -201,21 +206,24 @@ export default function AlumniDirectory() {
                     <div style={sx.empty}>No alumni found.</div>
                 ) : (
                     <ul style={sx.resultsList}>
+                        <li key="header" style={{ ...sx.resultItem, background: "#1b1c20", borderTopLeftRadius: 10, borderTopRightRadius: 10, fontWeight: 700 }}>
+                            <span style={sx.name}>Name</span>
+                            <span style={sx.meta}>Batch</span>
+                            <span style={sx.meta}>District</span>
+                            <span style={sx.meta}>University / Org</span>
+                        </li>
                         {display.map((row, i) => (
                             <li key={i} style={sx.resultItem}>
-                                <span style={sx.name}>{row?.[0] || "-"}</span>
-                                <span style={sx.meta}>{row?.[1] || "-"}</span>
-                                <span style={sx.meta}>{row?.[2] || "-"}</span>
-                                <span style={sx.meta}>{row?.[3] || "-"}</span>
+                                <span style={sx.name}>{row?.[COL.NAME] || "-"}</span>
+                                <span style={sx.meta}>{row?.[COL.BATCH] || "-"}</span>
+                                <span style={sx.meta}>{row?.[COL.DISTRICT] || "-"}</span>
+                                <span style={sx.meta}>{row?.[COL.ORG] || "-"}</span>
                             </li>
                         ))}
                     </ul>
                 )}
             </div>
 
-
-
-            {/* Add Alumni Modal */}
             {showAdd && (
                 <div style={sx.modalOverlay} onClick={() => setShowAdd(false)}>
                     <div style={sx.modal} onClick={(e) => e.stopPropagation()}>
@@ -223,25 +231,25 @@ export default function AlumniDirectory() {
                         <div style={sx.modalBody}>
                             <input
                                 style={sx.modalInput}
-                                placeholder="Name"
+                                placeholder="Full Name"
                                 value={form.name}
                                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                             />
                             <input
                                 style={sx.modalInput}
-                                placeholder="Batch"
+                                placeholder="Batch (e.g. 12th Batch 2021-22)"
                                 value={form.batch}
                                 onChange={(e) => setForm({ ...form, batch: e.target.value })}
                             />
                             <input
                                 style={sx.modalInput}
-                                placeholder="Country"
-                                value={form.country}
-                                onChange={(e) => setForm({ ...form, country: e.target.value })}
+                                placeholder="Home District"
+                                value={form.district}
+                                onChange={(e) => setForm({ ...form, district: e.target.value })}
                             />
                             <input
                                 style={sx.modalInput}
-                                placeholder="Organization"
+                                placeholder="University / Organization"
                                 value={form.organization}
                                 onChange={(e) => setForm({ ...form, organization: e.target.value })}
                             />
@@ -259,7 +267,6 @@ export default function AlumniDirectory() {
     );
 }
 
-/* ---------- styles (CSS-in-JS) ---------- */
 const purple = "#6C5CE7";
 const purpleDim = "#5a4fd1";
 const cardBg = "#1b1c20";
@@ -290,9 +297,9 @@ const sx = {
         border: `1px solid ${border}`,
         borderRadius: 16,
         padding: 16,
-        display: "grid",
-        gridTemplateColumns: "2fr 1fr 1fr 1fr auto auto",
-        gap: 12,
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
     },
     input: {
         height: 44,
@@ -363,40 +370,6 @@ const sx = {
     error: { textAlign: "center", padding: 24, color: "#ff8080" },
     empty: { textAlign: "center", padding: 24, color: textDim },
 
-    roundPhoto: {
-        position: "fixed",
-        right: 24,
-        bottom: 24,
-        width: 140,
-        height: 140,
-        objectFit: "cover",
-        borderRadius: "50%",
-        border: `4px solid ${pageBg}`,
-        boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
-        pointerEvents: "none",
-    },
-    card: {
-        maxWidth: 980,
-        margin: "0 auto",
-        background: "#1b1c20",
-        borderRadius: 16,
-        padding: 16,
-        display: "flex",
-        flexDirection: "column",
-        gap: 16,
-    },
-    inputsRow: {
-        display: "grid",
-        gridTemplateColumns: "2fr 1fr 1fr 1fr",
-        gap: 12,
-    },
-    buttonsRow: {
-        display: "flex",
-        justifyContent: "center",
-        gap: 12,
-    },
-
-    /* Modal */
     modalOverlay: {
         position: "fixed",
         inset: 0,
