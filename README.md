@@ -1,70 +1,115 @@
-# Getting Started with Create React App
+# NITER EEE Alumni Directory
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Web app to browse and register NITER EEE alumni. Data lives in **Google Sheets**; a **Node/Express** API reads and writes it, and a **React** UI talks to that API.
 
-## Available Scripts
+## What’s in this repo
 
-In the project directory, you can run:
+| Path | Role |
+|------|------|
+| `src/` | React frontend (Create React App) — search, list, add alumni |
+| `server/` | Express backend — Google Sheets API, stats, health check |
+| `public/` | Static HTML shell and icons |
 
-### `npm start`
+**Flow:** Browser → `http://localhost:3000` → API `http://localhost:5000` → Google Sheet (`Sheet1` read + `Sheet2` write).
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Features
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- Search alumni by name, batch, hometown/district, organization
+- View directory cards with contact and profile details
+- Add new alumni (15-field form) → appends a row to **Sheet2**
+- Visit / search counters (`/stats`)
+- Legacy **Sheet1** rows are normalized into the same 15-column shape for the UI
 
-### `npm test`
+## Alumni fields (A–O)
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+| Col | Field |
+|-----|--------|
+| A | Full Name |
+| B | Batch / Session |
+| C | Student ID |
+| D | Phone / WhatsApp |
+| E | Email |
+| F | Facebook link |
+| G | LinkedIn link *(optional)* |
+| H | Current Address |
+| I | Hometown |
+| J | Blood Group |
+| K | Current Position / Designation |
+| L | Company / Organization / University |
+| M | Field of Work / Higher Studies |
+| N | Previous experience |
+| O | Skills / Areas of expertise |
 
-### `npm run build`
+If position is `Student` or `None`, company / field / previous experience / skills are cleared and not required.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## API
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+| Method | Path | Notes |
+|--------|------|--------|
+| `GET` | `/alumni` | List (optional `q`, `batch`, `district`, `organization`) |
+| `POST` | `/alumni` | Create — JSON body with the 15 fields above |
+| `GET` | `/health` | Server + sheet config check |
+| `GET` | `/stats` | Visit & search counts |
+| `POST` | `/stats/visit` | Increment visits |
+| `POST` | `/stats/search` | Increment searches |
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Setup
 
-### `npm run eject`
+### 1. Google Cloud / Sheet
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+1. Create a Google Cloud **service account** and download its JSON key.
+2. Save it as `server/service-account-key.json` *(gitignored)*.
+3. Share your Google Spreadsheet with the service account email (**Editor**).
+4. Copy the spreadsheet ID from the sheet URL.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### 2. Backend env
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+Create `server/.env` *(gitignored)*:
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+```env
+PORT=5000
+GOOGLE_SPREADSHEET_ID=your_spreadsheet_id
+SHEET_NAMES=Sheet1,Sheet2
+WRITE_SHEET=Sheet2
+DATA_RANGE=A:O
+```
 
-## Learn More
+### 3. Install & run
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```bash
+# Frontend
+npm install
+npm start
+# → http://localhost:3000
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+# Backend (separate terminal)
+cd server
+npm install
+npm start
+# → http://localhost:5000
+```
 
-### Code Splitting
+Frontend API base is currently `http://localhost:5000` in `src/AlumniDirectory.jsx`. Change that (or use `REACT_APP_API_URL`) before deploying.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## Deploy (Render sketch)
 
-### Analyzing the Bundle Size
+1. **Web Service** from `server/` — start `npm start`; set env vars; put service-account JSON in an env var or secret file.
+2. **Static Site** from repo root — build `npm install && npm run build`, publish `build`; set API URL to the backend.
+3. Keep the Sheet shared with the service account.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## Scripts
 
-### Making a Progressive Web App
+**Root**
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+- `npm start` — React dev server
+- `npm run build` — production build → `build/`
+- `npm test` — tests
 
-### Advanced Configuration
+**`server/`**
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+- `npm start` — Express API
 
-### Deployment
+## Notes
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- Do **not** commit `server/.env` or `server/service-account-key.json`.
+- Prefer one project root; avoid nested duplicate `alumnisite/alumnisite` folders when pushing to GitHub.
