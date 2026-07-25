@@ -45,7 +45,7 @@ const BLOOD_OPTIONS = [
 ];
 
 export default function AlumniDirectory() {
-  const API_BASE = "https://alumnisite-zkvi.onrender.com/5000";
+  const API_BASE = "https://alumnisite-zkvi.onrender.com";
 
   const [alumni, setAlumni] = useState([]);
   const [display, setDisplay] = useState([]);
