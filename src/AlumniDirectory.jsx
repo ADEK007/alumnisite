@@ -48,7 +48,7 @@ export default function AlumniDirectory() {
   const API_BASE =
     typeof window !== "undefined" && window.location.hostname !== "localhost"
       ? window.location.origin
-      : "http://localhost:5000";
+      : "http://localhost:10000";
 
   const [alumni, setAlumni] = useState([]);
   const [display, setDisplay] = useState([]);
@@ -536,56 +536,6 @@ export default function AlumniDirectory() {
                       "Server is not reachable or Google Sheets integration is down."}
                   </div>
                 )}
-                <div
-                  style={{
-                    marginTop: 12,
-                    fontSize: 13,
-                    color: "#ffd4d4",
-                    background: "rgba(255,255,255,0.03)",
-                    padding: "10px 14px",
-                    borderRadius: 8,
-                    border: "1px solid rgba(255,120,120,0.25)",
-                    textAlign: "left",
-                    maxWidth: 640,
-                    marginLeft: "auto",
-                    marginRight: "auto",
-                  }}
-                >
-                  <div style={{ fontWeight: 600, marginBottom: 6 }}>
-                    👉 Render Dashboard → Environment:
-                  </div>
-                  <div style={{ margin: "4px 0" }}>
-                    1. Set{" "}
-                    <code
-                      style={{
-                        background: "rgba(255,255,255,0.08)",
-                        padding: "2px 6px",
-                        borderRadius: 4,
-                        margin: "0 2px",
-                      }}
-                    >
-                      GOOGLE_SERVICE_ACCOUNT_B64
-                    </code>{" "}
-                    = base64 of your service-account-key.json
-                  </div>
-                  <div style={{ margin: "4px 0" }}>
-                    2. Set{" "}
-                    <code
-                      style={{
-                        background: "rgba(255,255,255,0.08)",
-                        padding: "2px 6px",
-                        borderRadius: 4,
-                        margin: "0 2px",
-                      }}
-                    >
-                      GOOGLE_SPREADSHEET_ID
-                    </code>
-                  </div>
-                  <div style={{ margin: "4px 0" }}>
-                    3. Manual Deploy → Deploy with{" "}
-                    <strong>Clear Build Cache</strong>
-                  </div>
-                </div>
               </div>
             )
           ) : error ? (
