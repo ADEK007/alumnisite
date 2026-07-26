@@ -575,11 +575,24 @@ export default function AlumniDirectory() {
                   District
                 </span>
                 <span style={sx.meta} data-role="meta">
-                  University / Org
+                  Organization
+                </span>
+                <span style={sx.meta} data-role="meta">
+                  Social Links
+                </span>
+                <span style={sx.meta} data-role="meta">
+                  Email
                 </span>
               </li>
               {display.map((row, i) => {
                 const cappedIndex = Math.min(i, 40);
+                const fbLink = String(row?.[COL.FACEBOOK] || "").trim();
+                const liLink = String(row?.[COL.LINKEDIN] || "").trim();
+                const wpNum = String(row?.[COL.PHONE] || "").trim();
+                const emailVal = String(row?.[COL.EMAIL] || "").trim();
+                const wpLink = wpNum
+                  ? `https://wa.me/${wpNum.replace(/\D/g, "")}`
+                  : "";
                 return (
                   <li
                     key={i}
@@ -606,6 +619,92 @@ export default function AlumniDirectory() {
                     </span>
                     <span style={sx.meta} data-role="meta" data-label="Org:">
                       {row?.[COL.COMPANY] || "-"}
+                    </span>
+                    <span
+                      style={{ ...sx.meta, ...sx.socialCell }}
+                      data-role="meta"
+                      data-label="Social:"
+                    >
+                      {fbLink && (
+                        <a
+                          href={fbLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={sx.socialIconBtn}
+                          title="Facebook"
+                          onClick={(e) => e.stopPropagation()}
+                          className="social-smooth"
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="#1877F2"
+                            aria-hidden
+                          >
+                            <path d="M13.5 21V14H16L16.5 10.5H13.5V8.5C13.5 7.53 13.77 6.9 15.06 6.9H16.5V3.6C16.25 3.56 15.4 3.5 14.36 3.5C12.22 3.5 10.8 4.8 10.8 7.26V10.5H8V14H10.8V21H13.5Z" />
+                          </svg>
+                        </a>
+                      )}
+                      {liLink && (
+                        <a
+                          href={liLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={sx.socialIconBtn}
+                          title="LinkedIn"
+                          onClick={(e) => e.stopPropagation()}
+                          className="social-smooth"
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="#0A66C2"
+                            aria-hidden
+                          >
+                            <path d="M4.98 3.5C4.98 4.88 3.87 6 2.5 6C1.12 6 0 4.88 0 3.5C0 2.12 1.12 1 2.5 1C3.87 1 4.98 2.12 4.98 3.5ZM0.24 8H4.76V23H0.24V8ZM8.16 8H12.46V10.18H12.52C13.12 9.04 14.58 7.9 16.94 7.9C21.9 7.9 23 11.18 23 15.58V23H18.5V16.34C18.5 14.16 18.12 12.54 16.9 12.54C15.42 12.54 14.46 13.68 14.46 15.36V23H10V8H8.16Z" />
+                          </svg>
+                        </a>
+                      )}
+                      {wpLink && (
+                        <a
+                          href={wpLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={sx.socialIconBtn}
+                          title="WhatsApp"
+                          onClick={(e) => e.stopPropagation()}
+                          className="social-smooth"
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="#25D366"
+                            aria-hidden
+                          >
+                            <path d="M17.472 14.382C17.394 14.244 16.764 13.932 16.452 13.776C16.14 13.62 15.828 13.698 15.6 13.932C15.372 14.166 14.904 14.712 14.748 14.904C14.592 15.096 14.436 15.12 14.124 14.982C13.812 14.844 13.344 14.688 12.828 14.208C12.42 13.824 12.108 13.356 11.94 12.972C11.784 12.588 11.952 12.402 12.078 12.258C12.192 12.126 12.336 11.934 12.408 11.766C12.48 11.598 12.444 11.466 12.372 11.328C12.3 11.19 11.76 9.888 11.532 9.372C11.322 8.88 11.124 8.958 10.968 8.946C10.836 8.934 10.704 8.94 10.584 8.94C10.44 8.94 10.2 8.994 9.996 9.24C9.792 9.486 9.156 10.104 9.156 11.286C9.156 12.468 9.996 13.602 10.116 13.758C10.236 13.914 11.736 16.182 13.98 17.13C15.216 17.67 16.08 17.88 16.512 17.976C17.244 18.138 17.892 18.09 18.276 18.03C18.732 17.958 19.62 17.472 19.824 16.866C20.028 16.26 20.028 15.774 19.98 15.696C19.932 15.618 19.776 15.564 19.464 15.42ZM12.036 2.16C6.528 2.16 2.064 6.624 2.064 12.132C2.064 13.896 2.544 15.6 3.432 17.064L2.16 21.84L7.08 20.604C8.508 21.42 10.224 21.876 12.036 21.876C17.544 21.876 22.008 17.412 22.008 11.904C22.008 9.252 20.964 6.744 19.092 4.872C17.22 3 14.712 2.16 12.036 2.16Z" />
+                          </svg>
+                        </a>
+                      )}
+                      {!fbLink && !liLink && !wpLink && (
+                        <span style={sx.metaDim}>—</span>
+                      )}
+                    </span>
+                    <span style={sx.meta} data-role="meta" data-label="Email:">
+                      {emailVal ? (
+                        <a
+                          href={`mailto:${emailVal}`}
+                          style={sx.emailLink}
+                          onClick={(e) => e.stopPropagation()}
+                          className="result-email-link"
+                        >
+                          {emailVal}
+                        </a>
+                      ) : (
+                        "-"
+                      )}
                     </span>
                   </li>
                 );
@@ -1202,7 +1301,7 @@ const sx = {
     overflowX: "hidden",
   },
   content: {
-    maxWidth: 1020,
+    maxWidth: 1200,
     margin: "0 auto",
     position: "relative",
   },
@@ -1212,7 +1311,7 @@ const sx = {
   number: { color: text, fontWeight: 700 },
 
   card: {
-    maxWidth: 980,
+    maxWidth: 1160,
     margin: "0 auto",
     background: cardBg,
     border: `1px solid ${border}`,
@@ -1252,7 +1351,7 @@ const sx = {
   },
 
   welcomeCard: {
-    maxWidth: 980,
+    maxWidth: 1160,
     margin: "18px auto 10px",
     background: cardBg,
     border: `1px solid ${border}`,
@@ -1274,18 +1373,44 @@ const sx = {
   },
   smallNote: { fontSize: 13, lineHeight: 1.6, color: textDim },
 
-  resultsWrap: { maxWidth: 980, margin: "6px auto 0" },
+  resultsWrap: { maxWidth: 1160, margin: "6px auto 0" },
   resultsList: { listStyle: "none", margin: 0, padding: 0 },
   resultItem: {
     display: "grid",
-    gridTemplateColumns: "2fr 1fr 1fr 1fr",
+    gridTemplateColumns: "2.2fr 1.3fr 1fr 1.3fr 1fr 1.8fr",
     gap: 12,
     padding: "14px 16px",
     borderBottom: `1px solid ${border}`,
     background: "#13141a",
+    alignItems: "center",
   },
   name: { fontWeight: 600 },
   meta: { color: textDim },
+  metaDim: { color: "#55575e" },
+  socialCell: {
+    display: "flex",
+    gap: 8,
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+  socialIconBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    background: "#121318",
+    border: `1px solid ${border}`,
+    display: "grid",
+    placeItems: "center",
+    cursor: "pointer",
+    textDecoration: "none",
+    transition:
+      "transform 0.12s ease, border-color 0.12s ease, background 0.12s ease",
+  },
+  emailLink: {
+    color: textDim,
+    textDecoration: "none",
+    wordBreak: "break-all",
+  },
 
   loading: {
     textAlign: "center",
@@ -1310,7 +1435,7 @@ const sx = {
   error: { textAlign: "center", padding: 24, color: "#ff8080" },
   empty: { textAlign: "center", padding: 24, color: textDim },
   messageInfo: {
-    maxWidth: 980,
+    maxWidth: 1160,
     margin: "6px auto 0",
     textAlign: "center",
     padding: "28px 24px",
@@ -1322,7 +1447,7 @@ const sx = {
     fontWeight: 500,
   },
   messageGood: {
-    maxWidth: 980,
+    maxWidth: 1160,
     margin: "6px auto 0",
     textAlign: "center",
     padding: "32px 24px",
@@ -1334,7 +1459,7 @@ const sx = {
     fontWeight: 600,
   },
   messageBad: {
-    maxWidth: 980,
+    maxWidth: 1160,
     margin: "6px auto 0",
     textAlign: "center",
     padding: "32px 24px",
@@ -1442,7 +1567,7 @@ const sx = {
     left: 0,
     right: 0,
     bottom: 0,
-    maxWidth: 1020,
+    maxWidth: 1200,
     margin: "0 auto",
     display: "flex",
     alignItems: "center",

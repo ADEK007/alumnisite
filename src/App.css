@@ -312,10 +312,34 @@
   animation: pulseGlow 1.8s ease-out infinite;
 }
 
+/* ---- Result row email link hover ---- */
+.result-email-link {
+  transition: color 0.18s ease, text-decoration 0.18s ease;
+}
+.result-email-link:hover {
+  color: #6C5CE7 !important;
+  text-decoration: underline;
+}
+
+/* ==========================================================================
+   TABLET RESPONSIVE OVERRIDES
+   Tablets + small laptops: 821px to 1080px
+   ========================================================================== */
+
+@media (max-width: 1080px) and (min-width: 821px) {
+  [data-role="content"] { max-width: 980px !important; }
+  [data-role="form-card"],
+  [data-role="results-wrap"],
+  [data-role="welcome-card"],
+  [data-role="msg-good"],
+  [data-role="msg-bad"],
+  [data-role="msg-info"] { max-width: 940px !important; }
+}
+
 /* ==========================================================================
    MOBILE RESPONSIVE OVERRIDES
    Target devices: iPhone SE (375), Pixel 5 (393), iPhone 12/13 Pro (390),
-                   Samsung Galaxy S8+ (360), tablets up to ~768px
+                   Samsung Galaxy S8+ (360), tablets up to ~820px
    ========================================================================== */
 
 @media (max-width: 820px) {
@@ -341,6 +365,7 @@
   /* ---- Search form ---- */
   [data-role="form-card"] {
     padding: 14px !important;
+    max-width: 100% !important;
   }
   [data-role="inputs-row"] {
     flex-direction: column !important;
@@ -372,6 +397,7 @@
   [data-role="welcome-card"] {
     border-radius: 14px !important;
     padding: 18px 14px !important;
+    max-width: 100% !important;
   }
   [data-role="welcome-title"] {
     font-size: 17px !important;
@@ -399,9 +425,11 @@
     font-size: 14px !important;
     padding: 16px 14px !important;
     border-radius: 12px !important;
+    max-width: 100% !important;
   }
 
   /* ---- Results list (card-style rows for mobile) ---- */
+  [data-role="results-wrap"] { max-width: 100% !important; }
   [data-role="results-list"] {
     margin: 0 !important;
     padding: 0 !important;
@@ -410,6 +438,7 @@
     box-shadow: none !important;
   }
   [data-role="results-list"] > li[data-role="result-item"] {
+    display: flex !important;
     flex-direction: column !important;
     align-items: flex-start !important;
     padding: 14px !important;
@@ -449,6 +478,8 @@
   [data-role="results-list"] [data-role="meta"]:nth-of-type(1):not([data-label])::before { content: "Batch:"; }
   [data-role="results-list"] [data-role="meta"]:nth-of-type(2):not([data-label])::before { content: "District:"; }
   [data-role="results-list"] [data-role="meta"]:nth-of-type(3):not([data-label])::before { content: "Org:"; }
+  [data-role="results-list"] [data-role="meta"]:nth-of-type(4):not([data-label])::before { content: "Social:"; }
+  [data-role="results-list"] [data-role="meta"]:nth-of-type(5):not([data-label])::before { content: "Email:"; }
 
   /* ---- Modal (Add Alumni popup) ---- */
   [data-role="modal"] {
