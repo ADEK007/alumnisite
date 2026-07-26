@@ -263,26 +263,48 @@ if (!fs.existsSync(KEY_FILE) && process.env.GOOGLE_SERVICE_ACCOUNT_B64) {
   }
 }
 
-if (!fs.existsSync(KEY_FILE)) {
-  console.error(
-    '\n❌ Missing: server/service-account-key.json\n' +
-      '   Download your Service Account JSON key from Google Cloud Console\n' +
-      '   (IAM & Admin -> Service Accounts -> Manage Keys -> Add Key -> Create new key -> JSON)\n' +
-      '   Save it as "service-account-key.json" inside the server/ folder.\n'
-  );
-  process.exit(1);
-}
+/* =========================================================
+ * Graceful degraded-mode validation (NO process.exit!)
+ * On Render we must keep Express running so /health and API
+ * routes return structured diagnostic information instead
+ * of crashing the process on boot.
+ * ========================================================= */
+const BOOT_ERRORS = [];
+let KEY_FILE_OK = fs.existsSync(KEY_FILE);
+let SPREADSHEET_ID_OK = Boolean(SPREADSHEET_ID);
+let SHEETS_OK = KEY_FILE_OK && SPREADSHEET_ID_OK;
 
-if (!SPREADSHEET_ID) {
-  console.error(
-    '\n❌ Missing GOOGLE_SPREADSHEET_ID in server/.env\n' +
-      '   Copy the ID from your Google Sheet URL:\n' +
-      '   https://docs.google.com/spreadsheets/d/THIS_IS_THE_ID/edit\n'
+if (!KEY_FILE_OK) {
+  BOOT_ERRORS.push(
+    'Missing service-account-key.json. In Render Environment, set GOOGLE_SERVICE_ACCOUNT_B64 (base64 of the full service-account-key.json file contents). Or place the file at server/service-account-key.json.'
   );
-  process.exit(1);
+  console.error(
+    '\n⚠️  [BOOT ERROR] Missing: server/service-account-key.json\n' +
+      '   -> Option A (Render): Set GOOGLE_SERVICE_ACCOUNT_B64 = base64(full JSON key file)\n' +
+      '   -> Option B (Local): Download from Google Cloud Console\n' +
+      '      (IAM & Admin -> Service Accounts -> Manage Keys -> Add Key -> JSON)\n' +
+      '      Save as server/service-account-key.json\n'
+  );
+}
+if (!SPREADSHEET_ID_OK) {
+  BOOT_ERRORS.push(
+    'Missing GOOGLE_SPREADSHEET_ID env var. Copy the ID from your Google Sheet URL (d/...ID.../edit).'
+  );
+  console.error(
+    '\n⚠️  [BOOT ERROR] Missing GOOGLE_SPREADSHEET_ID\n' +
+      '   -> Local: set in server/.env\n' +
+      '   -> Render: set in Environment Variables\n'
+  );
 }
 
 const sheetsClient = async () => {
+  if (!SHEETS_OK) {
+    const msg = [
+      'Google Sheets client unavailable.',
+      ...BOOT_ERRORS,
+    ].join(' ');
+    throw new Error(msg);
+  }
   const auth = new google.auth.GoogleAuth({
     keyFile: KEY_FILE,
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
@@ -398,7 +420,11 @@ app.get('/alumni', async (req, res) => {
   } catch (err) {
     console.error('GET /alumni error:', err.message);
     if (err?.errors) console.error('Google API errors:', JSON.stringify(err.errors, null, 2));
-    res.status(500).json({ error: 'Failed to fetch alumni from Google Sheets' });
+    res.status(500).json({
+      error: 'Failed to fetch alumni from Google Sheets. ' + (err?.message || ''),
+      sheetsClientReady: SHEETS_OK,
+      bootErrors: BOOT_ERRORS,
+    });
   }
 });
 
@@ -496,7 +522,11 @@ app.post('/alumni', async (req, res) => {
   } catch (err) {
     console.error('POST /alumni error:', err.message);
     if (err?.errors) console.error('Google API errors:', JSON.stringify(err.errors, null, 2));
-    res.status(500).json({ error: 'Failed to add alumni to Google Sheets' });
+    res.status(500).json({
+      error: 'Failed to add alumni to Google Sheets. ' + (err?.message || ''),
+      sheetsClientReady: SHEETS_OK,
+      bootErrors: BOOT_ERRORS,
+    });
   }
 });
 
@@ -529,13 +559,23 @@ app.post('/stats/search', (req, res) => {
 });
 
 app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
+  const status = SHEETS_OK ? 'ok' : 'degraded';
+  res.status(SHEETS_OK ? 200 : 503).json({
+    status,
     time: new Date().toISOString(),
-    spreadsheet: SPREADSHEET_ID ? SPREADSHEET_ID.slice(0, 6) + '...' : 'not set',
+    spreadsheet: SPREADSHEET_ID_OK
+      ? SPREADSHEET_ID.slice(0, 6) + '...' + SPREADSHEET_ID.slice(-4)
+      : 'NOT SET (set GOOGLE_SPREADSHEET_ID env var)',
+    keyFile: KEY_FILE_OK
+      ? ('present (' + KEY_FILE.replace(/\\/g, '/') + ')')
+      : 'MISSING (set GOOGLE_SERVICE_ACCOUNT_B64 env var to base64 of key JSON)',
+    sheetsClientReady: SHEETS_OK,
+    bootErrors: BOOT_ERRORS,
     readSheets: SHEET_NAMES,
     writeSheet: WRITE_SHEET,
     dataRange: DATA_RANGE,
+    nodeVersion: process.version,
+    port: Number(PORT),
   });
 });
 

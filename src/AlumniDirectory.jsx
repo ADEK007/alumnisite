@@ -56,6 +56,7 @@ export default function AlumniDirectory() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState("");
   const [backendOk, setBackendOk] = useState(false);
+  const [backendDetail, setBackendDetail] = useState([]);
   const [searchEmptyMsg, setSearchEmptyMsg] = useState(false);
 
   const [searchCount, setSearchCount] = useState(0);
@@ -99,12 +100,25 @@ export default function AlumniDirectory() {
         setLoading(true);
         const res = await fetch(`${API_BASE}/alumni`);
         const data = await res.json();
-        if (!Array.isArray(data)) throw new Error("Unexpected response");
-        setAlumni(data);
-        setDisplay([]);
-        setBackendOk(true);
+        if (res.ok && Array.isArray(data)) {
+          setAlumni(data);
+          setDisplay([]);
+          setBackendOk(true);
+          setBackendDetail([]);
+          setError("");
+        } else {
+          // Server responded with a structured error (missing env vars, etc.)
+          const detail = Array.isArray(data?.bootErrors) ? data.bootErrors : [];
+          const msg = String(data?.error || "Backend unavailable");
+          setBackendOk(false);
+          setBackendDetail(detail);
+          setAlumni([]);
+          setDisplay([]);
+          if (detail.length > 0) setError(msg);
+        }
       } catch (e) {
         setBackendOk(false);
+        setBackendDetail([]);
         setDisplay([]);
         setError("Couldn't fetch alumni. Check your backend is running.");
       } finally {
@@ -485,7 +499,93 @@ export default function AlumniDirectory() {
                 data-role="msg-bad"
                 className="message-enter"
               >
-                backend is currapted
+                <div style={{ marginBottom: 10, fontWeight: 600 }}>
+                  ⚠️ Backend configuration issue
+                </div>
+                {backendDetail.length > 0 ? (
+                  <ul
+                    style={{
+                      listStyle: "none",
+                      padding: 0,
+                      margin: "8px auto 6px",
+                      maxWidth: 640,
+                      textAlign: "left",
+                      fontSize: 13,
+                      lineHeight: 1.6,
+                      color: "#ffcaca",
+                    }}
+                  >
+                    {backendDetail.map((b, i) => (
+                      <li
+                        key={i}
+                        style={{
+                          background: "rgba(255,255,255,0.04)",
+                          borderRadius: 8,
+                          padding: "10px 14px",
+                          marginBottom: 6,
+                          border: "1px solid rgba(255,90,90,0.32)",
+                        }}
+                      >
+                        • {b}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div style={{ color: "#ffcaca", fontSize: 14 }}>
+                    {error ||
+                      "Server is not reachable or Google Sheets integration is down."}
+                  </div>
+                )}
+                <div
+                  style={{
+                    marginTop: 12,
+                    fontSize: 13,
+                    color: "#ffd4d4",
+                    background: "rgba(255,255,255,0.03)",
+                    padding: "10px 14px",
+                    borderRadius: 8,
+                    border: "1px solid rgba(255,120,120,0.25)",
+                    textAlign: "left",
+                    maxWidth: 640,
+                    marginLeft: "auto",
+                    marginRight: "auto",
+                  }}
+                >
+                  <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                    👉 Render Dashboard → Environment:
+                  </div>
+                  <div style={{ margin: "4px 0" }}>
+                    1. Set{" "}
+                    <code
+                      style={{
+                        background: "rgba(255,255,255,0.08)",
+                        padding: "2px 6px",
+                        borderRadius: 4,
+                        margin: "0 2px",
+                      }}
+                    >
+                      GOOGLE_SERVICE_ACCOUNT_B64
+                    </code>{" "}
+                    = base64 of your service-account-key.json
+                  </div>
+                  <div style={{ margin: "4px 0" }}>
+                    2. Set{" "}
+                    <code
+                      style={{
+                        background: "rgba(255,255,255,0.08)",
+                        padding: "2px 6px",
+                        borderRadius: 4,
+                        margin: "0 2px",
+                      }}
+                    >
+                      GOOGLE_SPREADSHEET_ID
+                    </code>
+                  </div>
+                  <div style={{ margin: "4px 0" }}>
+                    3. Manual Deploy → Deploy with{" "}
+                    <strong>Clear Build Cache</strong>
+                  </div>
+                </div>
               </div>
             )
           ) : error ? (
