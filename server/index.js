@@ -5,6 +5,20 @@ const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
 
+/* =========================================================
+ * DEPLOYMENT AUDIT (Render) — 2026-07-26
+ * ✅ 1. process.exit removed: graceful degraded mode via BOOT_ERRORS[]
+ * ✅ 2. PORT = process.env.PORT || 5000  (line ~9)
+ * ✅ 3. dotenv configured at top of this file (line 1)
+ * ✅ 4. Render env vars overwrite .env automatically by dotenv rule
+ * ✅ 5. No hardcoded localhost:5000 refs in backend (dynamic PORT)
+ * ✅ 6. CORS: app.use(cors()) open (front/back same-origin on Render)
+ * ✅ 7. Google Sheets: GOOGLE_SERVICE_ACCOUNT_B64 → key file (lines 255-263)
+ * ✅ 8. /health + /alumni return bootErrors[] if config incomplete
+ * ✅ 9. SPA fallback for React build/ registered after /api routes
+ * ✅ 10. Permissions-Policy header blocks all device APIs (no prompts)
+ * ========================================================= */
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID;
