@@ -578,8 +578,12 @@ app.post('/stats/search', (req, res) => {
 
 app.get('/health', (req, res) => {
   const status = SHEETS_OK ? 'ok' : 'degraded';
-  res.status(SHEETS_OK ? 200 : 503).json({
+  // NOTE: Always respond HTTP 200 so Render /health health-check probe passes
+  // even if configuration is incomplete. Status lives in the JSON body.
+  // Render will KILL the service and mark it Unhealthy if HTTP != 200.
+  res.status(200).json({
     status,
+    statusCode: SHEETS_OK ? 200 : 503,
     time: new Date().toISOString(),
     spreadsheet: SPREADSHEET_ID_OK
       ? SPREADSHEET_ID.slice(0, 6) + '...' + SPREADSHEET_ID.slice(-4)
@@ -621,13 +625,9 @@ if (fs.existsSync(BUILD_DIR)) {
 }
 
 (async () => {
-  try {
-    await ensureSheets();
-  } catch (e) {
-    console.warn('⚠️  ensureSheets() startup check had an issue:', e?.errors?.[0]?.message || e.message);
-    console.warn('    Server will continue — sheet tabs can also be created manually in Google Sheets UI.\n');
-  }
-
+  // CRITICAL (Render): Start the HTTP server FIRST before any network calls.
+  // Render has a ~30 second startup deadline to start listening + return 200
+  // on /health; any slow/async Google API calls BEFORE listen() cause KILL.
   app.listen(PORT, () => {
     console.log('\n========================================');
     console.log('✅  Alumni Backend is running');
@@ -638,10 +638,23 @@ if (fs.existsSync(BUILD_DIR)) {
     console.log(`    Read sheets:     ${SHEET_NAMES.join(', ')}`);
     console.log(`    Write target:    ${WRITE_SHEET}`);
     console.log(`    Data range:      ${DATA_RANGE}`);
+    console.log(`    Sheets ready:    ${SHEETS_OK ? 'YES' : 'NO (check bootErrors on /health endpoint)'}`);
     console.log('========================================\n');
     console.log('💡  Reminders:');
-    console.log('    1. Place service-account-key.json in server/ folder');
+    console.log('    1. Place service-account-key.json in server/ folder, OR');
+    console.log('       Set GOOGLE_SERVICE_ACCOUNT_B64 env var (Render)');
     console.log('    2. Share your Google Sheet with the Service Account email');
     console.log('    3. Sheet2 header row (A:O) = Name | Batch | StudentID | Phone | Email | Facebook | LinkedIn | CurrentAddr | Hometown | Blood | Position | Company | Field | PrevExp | Skills\n');
+
+    // Now run sheet-tab verification asynchronously AFTER listen succeeds.
+    // This runs in the background and won't block Render's health-check probe.
+    setImmediate(async () => {
+      try {
+        await ensureSheets();
+      } catch (e) {
+        console.warn('⚠️  ensureSheets() check had an issue (non-fatal):', e?.errors?.[0]?.message || e.message);
+        console.warn('    Sheet tabs can also be created manually in Google Sheets UI.\n');
+      }
+    });
   });
 })();

@@ -21,5 +21,10 @@ services:
         value: "Sheet2"
       - key: DATA_RANGE
         value: "A:O"
-      - key: GOOGLE_SERVICE_ACCOUNT_B64
-        sync: false
+#
+# IMPORTANT: Do NOT add GOOGLE_SERVICE_ACCOUNT_B64 to this render.yaml file.
+#            Blueprint/yaml env vars ALWAYS override dashboard secrets, even
+#            when empty, which would erase the secret you paste in the UI.
+#            Instead: Render Dashboard → Environment → Add Secret File →
+#            Key: GOOGLE_SERVICE_ACCOUNT_B64, value: base64 of service-account-key.json
+
