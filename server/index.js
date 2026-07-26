@@ -268,10 +268,14 @@ const KEY_FILE = path.join(__dirname, 'service-account-key.json');
  * ========================================================= */
 if (!fs.existsSync(KEY_FILE) && process.env.GOOGLE_SERVICE_ACCOUNT_B64) {
   try {
-    const raw = Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_B64, 'base64').toString('utf8');
+    // Trim whitespace defensively — users often paste with leading/trailing spaces/newlines
+    const cleaned = String(process.env.GOOGLE_SERVICE_ACCOUNT_B64).trim();
+    const raw = Buffer.from(cleaned, 'base64').toString('utf8');
     JSON.parse(raw); // validate it's valid JSON before writing
     fs.writeFileSync(KEY_FILE, raw, 'utf8');
     console.log('🔐  Wrote service-account-key.json from GOOGLE_SERVICE_ACCOUNT_B64 env var.');
+    KEY_FILE_OK = true;
+    SHEETS_OK = KEY_FILE_OK && SPREADSHEET_ID_OK;
   } catch (e) {
     console.error('❌  Failed to decode GOOGLE_SERVICE_ACCOUNT_B64:', e.message);
   }
