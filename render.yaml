@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: alumnisite
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm run render-build
+    startCommand: npm run render-start
+    healthCheckPath: /health
+    autoDeploy: yes
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: PORT
+        value: "10000"
+      - key: GOOGLE_SPREADSHEET_ID
+        value: "1VX8FkbTTi5gAxRa9Uv9rCc3pMTS51sawRfngXbL5xXY"
+      - key: SHEET_NAMES
+        value: "Sheet1,Sheet2"
+      - key: WRITE_SHEET
+        value: "Sheet2"
+      - key: DATA_RANGE
+        value: "A:O"
+      - key: GOOGLE_SERVICE_ACCOUNT_B64
+        sync: false

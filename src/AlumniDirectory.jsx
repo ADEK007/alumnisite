@@ -45,7 +45,10 @@ const BLOOD_OPTIONS = [
 ];
 
 export default function AlumniDirectory() {
-  const API_BASE = "https://alumnisite-zkvi.onrender.com";
+  const API_BASE =
+    typeof window !== "undefined" && window.location.hostname !== "localhost"
+      ? window.location.origin
+      : "http://localhost:5000";
 
   const [alumni, setAlumni] = useState([]);
   const [display, setDisplay] = useState([]);
@@ -124,12 +127,12 @@ export default function AlumniDirectory() {
             const data = await res.json();
             setSearchCount(data.total || 0);
           }
-        } catch (__) { }
+        } catch (__) {}
       } finally {
         setCountLoading(false);
       }
     })();
-  }, []);
+  }, [API_BASE]);
 
   const { batches, districts, orgs } = useMemo(() => {
     const b = new Set(),
@@ -209,7 +212,7 @@ export default function AlumniDirectory() {
         const statData = await statRes.json();
         setSearchCount(statData.total || 0);
       }
-    } catch (_) { }
+    } catch (_) {}
   };
 
   const onClear = () => {
@@ -323,7 +326,7 @@ export default function AlumniDirectory() {
           } else if (d?.error) {
             msg = d.error;
           }
-        } catch (_) { }
+        } catch (_) {}
         alert(msg);
         return;
       }

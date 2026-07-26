@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Alumni Directory",
+  "name": "NITER EEE Alumni Directory",
   "icons": [
     {
       "src": "favicon.ico",
@@ -19,7 +19,9 @@
     }
   ],
   "start_url": ".",
-  "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "display": "browser",
+  "theme_color": "#0f1013",
+  "background_color": "#0f1013",
+  "prefer_related_applications": false,
+  "scope": "/"
 }

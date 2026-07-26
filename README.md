@@ -1,6 +1,6 @@
 # NITER EEE Alumni Directory
 
-Web app to browse and register NITER EEE alumni. Data lives in **Google Sheets**; a **Node/Express** API reads and writes it, and a **React** UI talks to that API.
+Web app to browse and register NITER EEE alumni. Data lives in **Google Sheets**; a small **Node/Express** API reads and writes it, and a **React** UI talks to that API.
 
 ## What’s in this repo
 

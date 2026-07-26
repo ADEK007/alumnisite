@@ -159,7 +159,110 @@ let stats = readStats();
 app.use(cors());
 app.use(express.json());
 
+/* =========================================================
+ * Security + Permissions Policy headers
+ * Explicitly BLOCK every device / sensor permission so the
+ * browser NEVER shows "Access other apps and services" prompts.
+ * ========================================================= */
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader(
+    'Permissions-Policy',
+    [
+      'accelerometer=()',
+      'ambient-light-sensor=()',
+      'autoplay=()',
+      'battery=()',
+      'bluetooth=()',
+      'camera=()',
+      'ch-ua=()',
+      'ch-ua-arch=()',
+      'ch-ua-bitness=()',
+      'ch-ua-full-version=()',
+      'ch-ua-full-version-list=()',
+      'ch-ua-mobile=()',
+      'ch-ua-model=()',
+      'ch-ua-platform=()',
+      'ch-ua-platform-version=()',
+      'ch-ua-wow64=()',
+      'compute-pressure=()',
+      'cross-origin-isolated=()',
+      'direct-sockets=()',
+      'display-capture=()',
+      'document-domain=()',
+      'encrypted-media=()',
+      'execution-while-not-rendered=()',
+      'execution-while-out-of-viewport=()',
+      'focus-without-user-activation=()',
+      'fullscreen=()',
+      'gamepad=()',
+      'geolocation=()',
+      'gyroscope=()',
+      'hid=()',
+      'idle-detection=()',
+      'interest-cohort=()',
+      'join-ad-interest-group=()',
+      'keyboard-map=()',
+      'local-fonts=()',
+      'magnetometer=()',
+      'microphone=()',
+      'midi=()',
+      'otp-credentials=()',
+      'payment=()',
+      'picture-in-picture=()',
+      'publickey-credentials-create=()',
+      'publickey-credentials-get=()',
+      'run-ad-auction=()',
+      'screen-wake-lock=()',
+      'serial=()',
+      'shared-autofill=()',
+      'storage-access=()',
+      'sync-script=()',
+      'trust-token-redemption=()',
+      'unload=()',
+      'usb=()',
+      'vertical-scroll=()',
+      'web-share=()',
+      'window-management=()',
+      'xr-spatial-tracking=()',
+    ].join(', ')
+  );
+  next();
+});
+
+/* =========================================================
+ * Serve React static build in production.
+ * build/ lives at the repo root, one level above server/.
+ * ========================================================= */
+const BUILD_DIR = path.join(__dirname, '..', 'build');
+if (fs.existsSync(BUILD_DIR)) {
+  console.log(`📦  Serving React static build from: ${BUILD_DIR}`);
+  app.use(express.static(BUILD_DIR, { index: false, dotfiles: 'deny' }));
+}
+
 const KEY_FILE = path.join(__dirname, 'service-account-key.json');
+
+/* =========================================================
+ * Render-compatible service account loading.
+ * If service-account-key.json is missing but the env var
+ * GOOGLE_SERVICE_ACCOUNT_B64 is set (base64 of the JSON),
+ * decode and write it to disk so the googleapis client can
+ * read it. This lets users keep secrets in Render's env vars
+ * instead of committing JSON files to git.
+ * ========================================================= */
+if (!fs.existsSync(KEY_FILE) && process.env.GOOGLE_SERVICE_ACCOUNT_B64) {
+  try {
+    const raw = Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_B64, 'base64').toString('utf8');
+    JSON.parse(raw); // validate it's valid JSON before writing
+    fs.writeFileSync(KEY_FILE, raw, 'utf8');
+    console.log('🔐  Wrote service-account-key.json from GOOGLE_SERVICE_ACCOUNT_B64 env var.');
+  } catch (e) {
+    console.error('❌  Failed to decode GOOGLE_SERVICE_ACCOUNT_B64:', e.message);
+  }
+}
+
 if (!fs.existsSync(KEY_FILE)) {
   console.error(
     '\n❌ Missing: server/service-account-key.json\n' +
@@ -435,6 +538,29 @@ app.get('/health', (req, res) => {
     dataRange: DATA_RANGE,
   });
 });
+
+/* =========================================================
+ * SPA Fallback — serve React index.html for any non-API GET.
+ * MUST be registered AFTER all /api routes and /health.
+ * ========================================================= */
+if (fs.existsSync(BUILD_DIR)) {
+  const INDEX_HTML = path.join(BUILD_DIR, 'index.html');
+  app.get('*', (req, res, next) => {
+    if (
+      req.method !== 'GET' ||
+      req.path.startsWith('/alumni') ||
+      req.path.startsWith('/stats') ||
+      req.path.startsWith('/health')
+    ) {
+      return next();
+    }
+    if (fs.existsSync(INDEX_HTML)) {
+      res.sendFile(INDEX_HTML);
+    } else {
+      next();
+    }
+  });
+}
 
 (async () => {
   try {
