@@ -588,11 +588,21 @@ export default function AlumniDirectory() {
                 const cappedIndex = Math.min(i, 40);
                 const fbLink = String(row?.[COL.FACEBOOK] || "").trim();
                 const liLink = String(row?.[COL.LINKEDIN] || "").trim();
-                const wpNum = String(row?.[COL.PHONE] || "").trim();
+                const wpRaw = String(row?.[COL.PHONE] || "").trim();
+                let wpDigits = wpRaw.replace(/\D/g, "");
+                if (wpDigits) {
+                  if (wpDigits.startsWith("880")) {
+                    // OK, do nothing
+                  } else if (wpDigits.startsWith("0")) {
+                    wpDigits = "88" + wpDigits;
+                  } else if (wpDigits.startsWith("88")) {
+                    wpDigits = "880" + wpDigits.slice(2);
+                  } else {
+                    wpDigits = "880" + wpDigits;
+                  }
+                }
+                const wpLink = wpDigits ? `https://wa.me/${wpDigits}` : "";
                 const emailVal = String(row?.[COL.EMAIL] || "").trim();
-                const wpLink = wpNum
-                  ? `https://wa.me/${wpNum.replace(/\D/g, "")}`
-                  : "";
                 return (
                   <li
                     key={i}
