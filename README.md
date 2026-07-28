@@ -111,5 +111,5 @@ Frontend API base is currently `http://localhost:5000` in `src/AlumniDirectory.j
 
 ## Notes
 
-- Do **not** commit `server/.env` or `server/service-account-key.json`.
+
 - Prefer one project root; avoid nested duplicate `alumnisite/alumnisite` folders when pushing to GitHub.
